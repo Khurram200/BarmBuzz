@@ -32,9 +32,9 @@ Configuration StudentBaseline {
     $DCNodes        = $AllNodes | Where-Object { $_.Role -eq 'DC' } | Select-Object -ExpandProperty NodeName
     $WinClientNodes = $AllNodes | Where-Object { $_.Role -eq 'WinClient' } | Select-Object -ExpandProperty NodeName
 
-    # =========================
+    
     # DOMAIN CONTROLLER NODE(S)
-    # =========================
+    
     Node $DCNodes {
 
         # Computer name
@@ -107,9 +107,9 @@ Configuration StudentBaseline {
             DependsOn  = '[ADDomain]CreateForest'
         }
 
-        # ----------------------
+        
         # ORGANIZATIONAL UNITS
-        # ----------------------
+        
         foreach ($ou in $Node.OrgnizationalUnits) {
             $ouPath = if ([string]::IsNullOrWhiteSpace($ou.ParentPath)) {
                 $Node.DomainDN
@@ -134,9 +134,9 @@ Configuration StudentBaseline {
             }
         }
 
-        # ----------------------
+        
         # SECURITY GROUPS
-        # ----------------------
+        
         foreach ($grp in $Node.SecurityGroups) {
             $grpPath = "$($grp.OUPath),$($Node.DomainDN)"
             $deps    = @("[ADOrganizationalUnit]OU_$($grp.DependsOnKey)")
@@ -190,9 +190,9 @@ Configuration StudentBaseline {
             }
         }
 
-        # ----------------------
+        
         # PASSWORD POLICY
-        # ----------------------
+        
         ADDomainDefaultPasswordPolicy SetPasswordPolicy {
             DomainName               = $Node.DomainName
             ComplexityEnabled        = ($Node.PasswordPolicy.ComplexityEnabled -eq 'true')
@@ -209,9 +209,9 @@ Configuration StudentBaseline {
 
     }
 
-    # ======================
+    
     # WINDOWS CLIENT NODE(S)
-    # ======================
+    
     Node $WinClientNodes {
 
         TimeZone SetClientTimeZone {
