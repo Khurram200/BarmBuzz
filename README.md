@@ -1,240 +1,206 @@
-# Documentation
-
-Use these files for your written artefacts:
-- Runbook.md: what you did, week by week
-- DesignNotes.md: why you designed it this way
-
 BarmBuzz Active Directory Automation
+This project demonstrates how Infrastructure as Code (IaC) can be used to deploy and manage an Active Directory (AD) environment in a consistent, repeatable, and secure way. By leveraging PowerShell Desired State Configuration (DSC), the project automates the setup of a Domain Controller, the creation of Organizational Units (OUs), domain users, groups, and the application of security policies.
 
-Project Overview:
-The following functions are carried out by the configuration:
-It set ups the Domain Controller and generated Domain Users.
-It creates a fresh Active Directory Forest.
-It builds Organizational Unites (OU).
-It applies the registry-based security settings.
-It implements Delegation Administration.
-It uses the ADGLP approach to apply security groups.
-It connects Windows Client computers to the domain.
+Project Overview
+The configuration automates the following tasks:
+
+Domain Controller Setup: Deploys and configures the Domain Controller.
+
+Active Directory Forest: Creates a fresh AD Forest.
+
+Organizational Units (OUs): Creates OUs to structure AD.
+
+Security Policies: Applies registry-based security settings.
+
+Delegated Administration: Configures delegated permissions.
+
+Security Groups: Implements security groups using the ADGLP (Accounts → Global Groups → Domain Local Groups → Permissions) model.
+
+Client Machines: Connects Windows client machines to the domain.
+
+By using DSC and infrastructure-as-code principles, this approach ensures a scalable, repeatable, and compliant Active Directory setup.
 
 Tools Used
-The tools facilitate system configuration maintenance, guarantee consistency and lessen
-manual work. We applied the tools like PowerShell Desired State Configuration, GroupPolicy
-DSC, Networking DSC, Computer Management DSC and Windows Server Active Directory
-Domain Services.
+This project leverages the following tools for system configuration and automation:
 
-Structure
-BarmBuzz-DSC-Lab
-│
-├──  StudentBaseline.ps1
-│ DSC configuration that reads
-│ AllNodes.psd1 and deploys the environment
-│
-├── AllNodes.psd1
-│ Configuration data file containing
-│ domain settings, OU structure,
-│ users, groups, policies and node definitions
-│
-└── README.md
+PowerShell Desired State Configuration (DSC): For automating configuration.
+
+GroupPolicy DSC: For managing Group Policy Objects (GPOs).
+
+Networking DSC: For network configuration.
+
+ComputerManagement DSC: For managing computer-related configurations.
+
+Windows Server Active Directory Domain Services: For managing AD infrastructure.
 
 Domain Information
-Domain Controller:
-Interface “Ethernet” – Internal network
+Domain Controller Network Configuration
+Internal Network (Ethernet):
 
-“IP Address: 10.0.2.15
+IP Address: 10.0.2.15
+
 Subnet: /24
-DNS: 127.0.0.1”
-Interface “Ethernet2” – External network
-“IP Address 192.168.1.10
-Subnet:/24
-DNS: 127.0.0.1”
 
-Settings Values
-Domain Name BarmBuzz.corp
-NetBIOS Name BARMBUZZ
-Domain Controller BB-DC01
-Forest Mode Windows Threshold
-Domain Mode Windows Threshold
+DNS: 127.0.0.1
+
+External Network (Ethernet2):
+
+IP Address: 192.168.1.10
+
+Subnet: /24
+
+DNS: 127.0.0.1
+
+Domain Configuration
+Domain Name: barmbuzz.corp
+
+NetBIOS Name: BARMBUZZ
+
+Domain Controller Name: BB-DC01
+
+Forest Mode: Windows Threshold
+
+Domain Mode: Windows Threshold
 
 Active Directory Structure
-BarmBuzz
-│
-├── Tier0
-│ ├── Admins
-│ ├── Servers
-│ └── ServiceAccounts
-│
-├── Sites
-│ └── Bolton
-│ ├── Users
-│ └── Computers
-│ ├── Workstations
-│ ├── POS
-│ └── Kiosks
-│
-├── Groups
-│ ├── Role
-│ └── Resource
-│
-└── Clients
-
-├── Windows
-└── Linux
-
 Tier 0
-Admins Servers ServiceAccounts
-It manages the AD,
-Domain Controller, and
-security policies.
+Admins: Domain Admins, Service Accounts, Domain Controllers
 
-It separates the Domain
-controller which helps to
-apply specific security
-policies for servers.
-
-It includes service
-accounts that
-applications, such as
-monitoring systems and
-backup services, employ.
+Purpose: Manages AD, security policies, and domain controller configuration.
 
 Sites
-Users Computers
-It keeps the record of all the users for
-staff at the Bolton.
+Purpose: Contains records for users and computers.
 
-It contains the join domain devices in
-the Bolton.
+Example: Users and devices in Bolton.
 
-Example: Managers Example: workstations, POS
 Groups
-Role Resource
-It represents the job roles. It controls the access to specific
+Global Groups: Represent job roles (e.g., Managers, Helpdesk).
 
-resource.
-
-GG_BB_Bolton_Managers DL_BB_POS_LocalAdmins
+Domain Local Groups: Control resource access (e.g., POS terminals).
 
 Clients
-Applying different rules can be made simple by the OU Clients' separation of machines
-according to operating system type. For example, Windows and Linux are available in OU
-Clients. Linux systems can use various configuration management tools, while Windows
-machines may receive Windows Group Policy.
+OU Clients: Separates machines by OS type (e.g., Windows, Linux). This simplifies management and ensures the correct configuration management tools are applied based on OS type.
 
 Security Group Design
+Global Groups
+GG_BB_Bolton_Baristas: Represent Bolton Baristas.
 
-Accounts User
-Global Groups GG_BB_Bolton_Baristas
-Domain Local Groups GG_BB_POS_LocalAdmins
-Permissions Access to POS terminals
+GG_BB_Bolton_Managers: Represent Bolton Depot Managers.
 
-Global Role Groups
-Groups Purpose
-GG_BB_Bolton_Baristas Bolton Baristas
-GG_BB_Bolton_Managers Bolton depot managers
-GG_BB_IT_Helpdesk IT helpdesk staff
+GG_BB_IT_Helpdesk: Represent IT Helpdesk staff.
 
-Domain Local resource Groups
-Groups Purpose
-DL_BB_POS_LocalAdmins Local admin access on POS terminals
-DL_BB_Recipes_Read Read access to recipe repository
-DL_BB_Recipes_Write Write Access to recipe repository
+Domain Local Groups
+DL_BB_POS_LocalAdmins: Local admin access to POS terminals.
+
+DL_BB_Recipes_Read: Read access to recipe repository.
+
+DL_BB_Recipes_Write: Write access to recipe repository.
 
 Delegated Administration
-Active Directory Delegation is demonstrated in this project. Here, authorisation to add
-computers to the domain and remove computer objects is given to the IT helpdesk team.
-Permission given to the group: GG_BB_IT_Helpdesk
-Delegation responses to: OU=Computers, OU=Workstations, and OU=Bolton
+This project demonstrates Active Directory delegation, allowing the IT Helpdesk team to add/remove computers from the domain. This delegation applies to the following OUs: OU=Computers, OU=Workstations, and OU=Bolton.
+
 Domain Users
-Users Role
-Ava.barista Senior Barista
-Bob.manager Depot Manager
-Charlie.helpdesk IT Helpdesk Analyst
+Ava.barista: Senior Barista
+
+Bob.manager: Depot Manager
+
+Charlie.helpdesk: IT Helpdesk Analyst
 
 Password Policy
-Setting Value
-Minimum Length 10
-Password History 12
-Maximum Age 90 days
-Minimum Age 1 day
-Account Lockout 5 attempts
-Lockout duration 30 minutes
-Group Policy Object (PGO)
-GPO Name Purpose
-BB_Workstation_Baseline Workstation security baseline
-BB_Servers_Baseline Server baseline policies
-BB_POS_Lockdown POS terminal restrictions
-BB_Allusers_Banner Logon banner
+Minimum Length: 10 characters
 
+Password History: 12 entries
+
+Maximum Age: 90 days
+
+Minimum Age: 1 day
+
+Account Lockout: 5 attempts
+
+Lockout Duration: 30 minutes
+
+Group Policy Objects (GPO)
+GPO Name	Purpose
+BB_Workstation_Baseline	Workstation security baseline
+BB_Servers_Baseline	Server security baseline
+BB_POS_Lockdown	POS terminal restrictions
+BB_Allusers_Banner	Logon banner for all users
 Client Configuration
 Client: BB-WIN11-01
-Time Zone - we’ll set the correct time zone for the client by using this code
+Time Zone Configuration:
+
 TimeZone SetClientTimeZone {
-
-IsSingleInstance = 'Yes'
-TimeZone = $Node.TimeZone # e.g., 'GMT Standard Time'
+    IsSingleInstance = 'Yes'
+    TimeZone = $Node.TimeZone
 }
-DNS Server - then, we’ll configure DNS to point to the domain controller with this code
+DNS Configuration:
+
 DnsServerAddress SetDnsToDC {
-InterfaceAlias = $Node.InterfaceAlias_Internal # e.g., 'Ethernet'
-Address = $Node.DnsServerAddress # e.g., '192.168.99.10'
-AddressFamily = 'IPv4'
+    InterfaceAlias = $Node.InterfaceAlias_Internal
+    Address = $Node.DnsServerAddress
+    AddressFamily = 'IPv4'
 }
+Domain Join:
 
-Join Domain – by using this code, we’ll join the client to the Active Directory domain in the
-correct OU
 Computer JoinDomain {
-Name = $Node.ComputerName # e.g., 'BB-WIN11-01'
-DomainName = $Node.DomainName # e.g., 'barmbuzz.corp'
-JoinOU = $Node.JoinOU # e.g., 'OU=Windows,OU=Clients,OU=BarmBuzz'
-Credential = $DomainAdminCredential # Domain admin credentials
-DependsOn = '[DnsServerAddress]SetDnsToDC'
+    Name = $Node.ComputerName
+    DomainName = $Node.DomainName
+    JoinOU = $Node.JoinOU
+    Credential = $DomainAdminCredential
 }
+Windows Time Services:
+Ensure the W32Time service is running:
 
-Windows Time Services
 Service WindowsTimeClient {
-Name = 'W32Time'
-State = 'Running'
-StartupType = 'Automatic'
+    Name = 'W32Time'
+    State = 'Running'
+    StartupType = 'Automatic'
 }
+Security Features:
+Disable SMBv1 (legacy protocol):
 
-Security Features
-# Disable SMBv1 (legacy protocol)
 WindowsOptionalFeature DisableSMBv1Client {
-Name = 'SMB1Protocol'
-Ensure = 'Disable'
-NoWindowsUpdateCheck = $true
+    Name = 'SMB1Protocol'
+    Ensure = 'Disable'
 }
+Ensure Windows Firewall is Running:
 
-# Ensure Windows Firewall is running
 Service WindowsFirewall {
-Name = 'mpsSvc'
-State = 'Running'
-StartupType = 'Automatic'
+    Name = 'mpsSvc'
+    State = 'Running'
+    StartupType = 'Automatic'
 }
-
 DSC Configuration
-In our configuration file, we did configuration like import the configuration, create credentials,
-compile DSC configuration and start DSC.
-Import the configuration: .\StudentBaseline.ps1
-Create Credentials: $DomainAdminCredential = Get-Credential
+To compile and apply the DSC configuration, follow these steps:
+
+Import Configuration and Create Credentials:
+
+$DomainAdminCredential = Get-Credential
 $DsrmCredential = Get-Credential
 $UserCredential = Get-Credential
+Compile DSC Configuration:
 
-Compile DSC configuration: StudentBaseline `
--ConfigurationData .\AllNodes.psd1 `
--DomainAdminCredential $DomainAdminCredential `
--DsrmCredential $DsrmCredential `
--UserCredential $UserCredential
+StudentBaseline -ConfigurationData .\AllNodes.psd1 `
+    -DomainAdminCredential $DomainAdminCredential `
+    -DsrmCredential $DsrmCredential `
+    -UserCredential $UserCredential
+Start DSC Configuration:
 
-Start DSC: Start-DscConfiguration -Path .\StudentBaseline -Wait -Verbose -Force
+Start-DscConfiguration -Path .\StudentBaseline -Wait -Verbose -Force
+Conclusion
+This project successfully demonstrates how PowerShell DSC can automate the configuration of an Active Directory environment, making AD management more consistent, scalable, and secure. While there were some challenges with Group Policy Objects (GPOs) compatibility with PowerShell 7, the overall automation process simplified AD management tasks significantly.
 
-Conclusion:
-I found plenty of difficulties during this practical lab, but the primary issue was with Group
-Policies. Some of the GPO configurations weren't working since they are not totally compatible
-with PowerShell 7 on our Windows server.
-I gained a better understanding of how automation may improve safety and flexibility in a
-network environment while also making AD management simpler, quicker, and more structured.
-Refernces:
+References
+Microsoft (2024). Active Directory Domain Services Overview. Available at: Microsoft AD Overview
+
+Microsoft (2024). PowerShell Desired State Configuration (DSC) Documentation. Available at: DSC Overview
+
+Microsoft (2024). Group Policy Overview. Available at: Group Policy Overview
+
+Microsoft (2024). Active Directory Security Best Practices. Available at: Security Best Practices
+
+Packt Publishing, Limited. Mastering Active Directory. United Kingdom: Packt Publishing.
+
 Bertram, A.R. (2020) PowerShell for sysadmins: workflow automation made easy. 1st edn. San Francisco, CA: No Starch Press.
 
 Francis, D. (2021) ‘Advanced AD Management with PowerShell,’ in Mastering Active Directory. United Kingdom: Packt Publishing, Limited.
