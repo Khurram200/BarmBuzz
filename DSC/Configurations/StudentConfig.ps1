@@ -18,18 +18,17 @@ Configuration StudentBaseline {
         [PSCredential] $UserCredential
     )
 
-    # =======================
-    # IMPORT DSC MODULES
-    # =======================
+        # IMPORT DSC MODULES
+
     Import-DscResource -ModuleName PSDesiredStateConfiguration
     Import-DscResource -ModuleName ComputerManagementDSC
     Import-DscResource -ModuleName ActiveDirectoryDsc
     Import-DscResource -ModuleName NetworkingDsc
     # Note: GroupPolicyDsc removed for PowerShell 7 compatibility
 
-    # =======================
+    
     # DEFINE NODE ARRAYS
-    # =======================
+    
     $DCNodes        = $AllNodes | Where-Object { $_.Role -eq 'DC' } | Select-Object -ExpandProperty NodeName
     $WinClientNodes = $AllNodes | Where-Object { $_.Role -eq 'WinClient' } | Select-Object -ExpandProperty NodeName
 
@@ -164,9 +163,9 @@ Configuration StudentBaseline {
             }
         }
 
-        # ----------------------
+        
         # USERS
-        # ----------------------
+        
         foreach ($user in $Node.ADUsers) {
             $userPath = "$($user.OUPath),$($Node.DomainDN)"
 
