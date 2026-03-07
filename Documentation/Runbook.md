@@ -1,3 +1,406 @@
+# BarmBuzz AD DSC Runbook
+
+Operational runbook for engineers supporting the `barmbuzz.corp` environment managed with MOF-based PowerShell DSC.
+
+## 1) Purpose and Scope
+
+This runbook covers:
+
+- Initial engineering setup for Git, PowerShell, and DSC tools.
+- Environment preparation for the Domain Controller.
+- Compile/apply/test workflow for `StudentBaseline`.
+- Standard operational changes (users, OUs, groups, client join).
+- Verification, troubleshooting, rollback, and escalation.
+
+### In Scope
+
+- Domain Controller: `BB-DC01`
+- Windows client baseline node: `BB-WIN11-01`
+- AD OUs, users, security groups, password policy
+- DSC configuration data and orchestration process
+
+### Out of Scope
+
+- Full GPO enforcement from `GroupPolicyDsc` in PowerShell 7 (metadata may exist in config data, but enforcement may be limited in current implementation).
+
+---
+
+## 2) Repository and Key Files
+
+| Path | Purpose |
+|---|---|
+| `StudentBaseline.ps1` | DSC configuration definition (DC + WinClient nodes). |
+| `AllNodes.psd1` | Node and AD data (OUs, groups, users, policy metadata). |
+| `StudentBaseline\` | Generated MOF output after compilation. |
+| `Run_BuildMain.ps1` | Canonical orchestration script for prereqs + compile + apply. |
+
+---
+
+## 3) Required Credentials and Nodes
+
+### Credentials
+
+| Credential | Used for |
+|---|---|
+| Domain Admin | AD operations, domain join, DSC on DC |
+| DSRM (Safe Mode) | AD forest/domain creation |
+| Default user password credential | Initial password for new AD users |
+
+### Node Reference
+
+| Node | Role | Notes |
+|---|---|---|
+| `localhost` | DC | `BB-DC01`, `barmbuzz.corp` |
+| `BB-WIN11-01` | WinClient | DNS points to DC; joins Clients OU |
+
+---
+
+## 4) First-Time Engineering Setup
+
+### 4.1 Install Git (Windows)
+
+```powershell
+winget install --id Git.Git -e --source winget
+git --version
+```
+
+### 4.2 Configure Git Identity
+
+```powershell
+git config --global user.name "Your Full Name"
+git config --global user.email "your.email@example.com"
+git config --global init.defaultBranch main
+git config --global core.editor "code --wait"
+```
+
+### 4.3 Optional: GPG for Signed Commits
+
+```powershell
+winget install -e --id GnuPG.Gpg4win
+gpg --full-generate-key
+gpg --armor --export your.email@example.com
+```
+
+Add the exported key to GitHub (Settings -> SSH and GPG keys).
+
+### 4.4 Optional: Create Local Repo and Set Remote
+
+```powershell
+mkdir your_directory_name
+cd your_directory_name
+git init
+git remote add origin https://github.com/yourusername/yourrepo.git
+```
+
+### 4.5 Generate Git Evidence (Submission/Audit)
+
+```powershell
+git log --all --decorate --graph --oneline > git_history_evidence.txt
+git reflog > git_reflog_evidence.txt
+git remote -v
+```
+
+---
+
+## 5) Platform Preparation (DSC v3 + PowerShell 7)
+
+### 5.1 Prepare Windows Server 2025 (DC Host)
+
+Set static IP (example):
+
+```powershell
+New-NetIPAddress -InterfaceAlias "Ethernet 2" -IPAddress 192.168.1.10 -PrefixLength 24
+Set-DnsClientServerAddress -InterfaceAlias "Ethernet 2" -ServerAddresses 192.168.1.10
+```
+
+Rename (optional):
+
+```powershell
+Rename-Computer -NewName "BARM-DC-01" -Restart
+```
+
+Install Windows Updates from Settings.
+
+### 5.2 Install PowerShell 7
+
+```powershell
+winget install -e --id Microsoft.PowerShell -s winget
+$PSVersionTable.PSVersion
+```
+
+### 5.3 Install DSC v3 CLI (if needed)
+
+```powershell
+winget install -e --id Microsoft.DSC -s winget
+dsc --help
+```
+
+### 5.4 Install DSC Modules
+
+```powershell
+Save-PSResource -Name ActiveDirectoryDsc -Version 6.6.0 -Repository PSGallery -Path "C:\Program Files\WindowsPowerShell\Modules" -TrustRepository
+Save-PSResource -Name GroupPolicyDsc -Version 1.0.3 -Repository PSGallery -Path "C:\Program Files\WindowsPowerShell\Modules" -TrustRepository
+Save-PSResource -Name ComputerManagementDsc -Repository PSGallery -Path "C:\Program Files\WindowsPowerShell\Modules" -TrustRepository
+Save-PSResource -Name NetworkingDsc -Repository PSGallery -Path "C:\Program Files\WindowsPowerShell\Modules" -TrustRepository
+Get-Module -ListAvailable -Name ActiveDirectoryDsc, GroupPolicyDsc, ComputerManagementDsc, NetworkingDsc
+```
+
+### 5.5 Install RSAT
+
+Windows Server:
+
+```powershell
+Install-WindowsFeature -Name RSAT-AD-PowerShell -IncludeAllSubFeature
+Install-WindowsFeature -Name GPMC
+```
+
+Windows 11:
+
+```powershell
+Add-WindowsCapability -Online -Name Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0
+Add-WindowsCapability -Online -Name Rsat.GroupPolicy.Management.Tools~~~~0.0.1.0
+```
+
+### 5.6 Optional Tooling (Git + VS Code)
+
+```powershell
+winget install -e --id Git.Git -s winget
+winget install -e --id Microsoft.VisualStudioCode -s winget
+code --install-extension ms-vscode.powershell
+code --install-extension redhat.vscode-yaml
+code --install-extension eamodio.gitlens
+code --install-extension mhutchie.git-graph
+code --install-extension donjayamanne.githistory
+```
+
+### 5.7 Pester
+
+```powershell
+Save-PSResource -Name Pester -Version 5.7.1 -Repository PSGallery -Path "C:\Program Files\WindowsPowerShell\Modules" -TrustRepository
+Import-Module Pester
+Invoke-Pester -Output Detailed
+```
+
+---
+
+## 6) Running the Configuration
+
+### 6.1 Recommended: Canonical Orchestrator
+
+From repo root:
+
+```powershell
+.\Run_BuildMain.ps1
+```
+
+### 6.2 Manual Compile/Apply Flow
+
+Prerequisites: PowerShell 5.1 or 7 and required DSC modules. `AllNodes.psd1` should be alongside `StudentBaseline.ps1`.
+
+Create credentials and compile:
+
+```powershell
+$AllNodes = Import-PowerShellDataFile -Path .\AllNodes.psd1
+$domainAdmin = Get-Credential -Message "Domain Admin"
+$dsrm        = Get-Credential -Message "DSRM"
+$userPwd     = Get-Credential -Message "Default user password"
+
+. .\StudentBaseline.ps1
+StudentBaseline -AllNodes $AllNodes `
+  -DomainAdminCredential $domainAdmin `
+  -DsrmCredential $dsrm `
+  -UserCredential $userPwd
+```
+
+Apply:
+
+```powershell
+Start-DscConfiguration -Path .\StudentBaseline -Wait -Verbose -Force
+```
+
+Test:
+
+```powershell
+Test-DscConfiguration -Path .\StudentBaseline
+```
+
+If using DSC v3 YAML in other projects:
+
+```powershell
+dsc config -Path "C:\Path\To\Your\Configuration.yaml"
+```
+
+---
+
+## 7) Standard Operational Procedures
+
+### 7.1 Compile and Apply After Config Changes
+
+When editing `StudentBaseline.ps1` or `AllNodes.psd1`:
+
+```powershell
+.\Apply-Configuration.ps1 -CompileOnly
+.\Apply-Configuration.ps1 -Apply
+.\Apply-Configuration.ps1 -Test
+```
+
+Or use manual `Start-DscConfiguration` and `Test-DscConfiguration`.
+
+### 7.2 Add a New AD User
+
+Preferred: add user object in `AllNodes.psd1` under `ADUsers`, then compile and apply.
+
+One-off manual alternative:
+
+```powershell
+$cred = Get-Credential
+New-ADUser -Name "jane.analyst" -GivenName "Jane" -Surname "Analyst" `
+  -UserPrincipalName "jane.analyst@barmbuzz.corp" `
+  -Path "OU=Users,OU=Bolton,OU=Sites,OU=BarmBuzz,DC=barmbuzz,DC=corp" `
+  -AccountPassword (ConvertTo-SecureString "TempPassword1!" -AsPlainText -Force) `
+  -ChangePasswordAtLogon $true -Enabled $true -Credential $cred
+Add-ADGroupMember -Identity "GG_BB_IT_Helpdesk" -Members "jane.analyst" -Credential $cred
+```
+
+### 7.3 Add a New OU or Security Group
+
+Edit `AllNodes.psd1`:
+
+- OU entries in `OrgnizationalUnits`.
+- Group entries in `SecurityGroups`.
+
+Then compile and apply.
+
+### 7.4 Join a New Windows Client
+
+Option A (preferred): add a new WinClient node in `AllNodes.psd1`, compile, and apply MOF on that node.
+
+Option B (one-off manual):
+
+```powershell
+Add-Computer -DomainName "barmbuzz.corp" -OUPath "OU=Windows,OU=Clients,OU=BarmBuzz,DC=barmbuzz,DC=corp" -Credential (Get-Credential)
+Restart-Computer
+```
+
+### 7.5 Generate Operational/Audit Evidence
+
+```powershell
+git log --all --decorate --graph --oneline > git_history_evidence.txt
+git reflog > git_reflog_evidence.txt
+git remote -v
+```
+
+### 7.6 Run Pester Tests
+
+```powershell
+Import-Module Pester
+Invoke-Pester -Path . -Output Detailed
+```
+
+---
+
+## 8) Verification Checklist
+
+| Check | Command |
+|---|---|
+| Domain exists | `Get-ADDomain` |
+| DC name / IP | `hostname`; `Get-NetIPAddress -AddressFamily IPv4` |
+| OUs | `Get-ADOrganizationalUnit -Filter * | Select Name, DistinguishedName` |
+| Security groups | `Get-ADGroup -Filter * | Select Name, GroupCategory` |
+| Users in Bolton OU | `Get-ADUser -Filter * -SearchBase "OU=Users,OU=Bolton,OU=Sites,OU=BarmBuzz,DC=barmbuzz,DC=corp"` |
+| Password policy | `Get-ADDefaultDomainPasswordPolicy` |
+| DSC status | `Get-DscConfigurationStatus` |
+| DSC desired state | `Test-DscConfiguration -Path .\StudentBaseline` |
+
+---
+
+## 9) Troubleshooting
+
+### Missing DSC Module
+
+- Symptom: `Import-DscResource` or module-not-found errors.
+- Action: install required modules and verify with `Get-Module -ListAvailable`.
+
+### Access Denied / Credential Failure
+
+- Symptom: failures during `Start-DscConfiguration`.
+- Action: run elevated shell; verify correct credential scope and node settings.
+
+### Resource Dependency Failure
+
+- Symptom: ADDomain, ADUser, ADGroup, or OU dependency errors.
+- Action: validate parent paths, object uniqueness, and `DependsOnKey` ordering in `AllNodes.psd1`.
+
+### Client Cannot Join Domain
+
+- Symptom: domain not found / trust relationship errors.
+- Action: set client DNS to DC, verify name resolution, verify credential.
+
+### MOF Not Found
+
+- Symptom: `Start-DscConfiguration` cannot locate MOF.
+- Action: run compile first and apply from directory containing output.
+
+---
+
+## 10) Rollback and Recovery
+
+### Unwanted Configuration Result
+
+- Fix `StudentBaseline.ps1` or `AllNodes.psd1`, recompile, and re-apply.
+- For one-off directory mistakes, correct in AD tools and reconcile configuration.
+
+### DC Promotion Failure / Broken DC
+
+- Use DSRM where applicable.
+- If required, demote/rebuild and run configuration from clean baseline.
+
+### Restore from Git
+
+```powershell
+git checkout -- StudentBaseline.ps1 Allnodes.psd1
+```
+
+Then recompile and re-apply.
+
+---
+
+## 11) Support Model and Escalation
+
+### Ownership
+
+- Primary: Platform/Infrastructure engineer
+- Secondary: Support engineer
+- Backup: Team lead / on-call engineer
+
+### Incident Priority
+
+| Priority | Example | Target response |
+|---|---|---|
+| P1 | DC unavailable / domain auth outage | Immediate (on-call) |
+| P2 | Failed apply affecting onboarding/change | < 4 hours |
+| P3 | Non-blocking drift / doc mismatch | Next business day |
+
+### Escalation Triggers
+
+- Two consecutive failed applies for same change.
+- Repeated domain join failures across clients.
+- AD object creation failures after credential validation.
+- Any issue requiring DSRM or DC recovery actions.
+
+---
+
+## 12) Git Branching Workflow (Reference)
+
+```powershell
+git checkout -b feature/update-readme
+# edit README.md
+git add README.md
+git commit -m "FEAT: update README with feature branch info"
+git checkout main
+git merge feature/update-readme
+git push origin main
+```
 <<<<<<< HEAD
 This repo contains the StudentBaseline DSC configuration for the BarmBuzz domain (barmbuzz.corp), OUs, security groups, users, and password policy. Group Policy resources are in configuration data but not applied (GroupPolicyDsc required for PowerShell 7 compatibility).
 ________________________________________

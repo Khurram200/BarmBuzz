@@ -1,212 +1,230 @@
-BarmBuzz Active Directory Automation
-This project demonstrates how Infrastructure as Code (IaC) can be used to deploy and manage an Active Directory (AD) environment in a consistent, repeatable, and secure way. By leveraging PowerShell Desired State Configuration (DSC), the project automates the setup of a Domain Controller, the creation of Organizational Units (OUs), domain users, groups, and the application of security policies.
+# BarmBuzz Active Directory Automation
 
-Project Overview
-The configuration automates the following tasks:
+PowerShell DSC-based Infrastructure as Code (IaC) project for deploying and managing an Active Directory environment in a consistent, repeatable, and secure way.
 
-Domain Controller Setup: Deploys and configures the Domain Controller.
+## Purpose
 
-Active Directory Forest: Creates a fresh AD Forest.
+This solution automates:
 
-Organizational Units (OUs): Creates OUs to structure AD.
+- Domain Controller provisioning and baseline configuration.
+- AD forest/domain creation.
+- Organizational Unit (OU) hierarchy creation.
+- Security group model using ADGLP (Accounts -> Global -> Domain Local -> Permissions).
+- Domain user creation and placement in OUs.
+- Registry-based security configuration.
+- Delegated administration for operational support.
+- Client machine domain onboarding.
 
-Security Policies: Applies registry-based security settings.
+The objective is a scalable, reproducible, and policy-aligned AD setup.
 
-Delegated Administration: Configures delegated permissions.
+## Technology Stack
 
-Security Groups: Implements security groups using the ADGLP (Accounts → Global Groups → Domain Local Groups → Permissions) model.
+- `PowerShell 7` (execution runtime)
+- `PowerShell DSC` (configuration engine)
+- `ActiveDirectoryDsc`
+- `ComputerManagementDsc`
+- `NetworkingDsc`
+- `GroupPolicyDsc` (where compatible)
+- `AD DS` role/services on Windows Server
 
-Client Machines: Connects Windows client machines to the domain.
+## Domain and Network Baseline
 
-By using DSC and infrastructure-as-code principles, this approach ensures a scalable, repeatable, and compliant Active Directory setup.
+### Domain
 
-Tools Used
-This project leverages the following tools for system configuration and automation:
+- Domain name: `barmbuzz.corp`
+- NetBIOS: `BARMBUZZ`
+- Domain Controller: `BB-DC01`
+- Forest mode: `Windows Threshold`
+- Domain mode: `Windows Threshold`
 
-PowerShell Desired State Configuration (DSC): For automating configuration.
+### Domain Controller NIC Configuration
 
-GroupPolicy DSC: For managing Group Policy Objects (GPOs).
+**Internal NIC (Ethernet)**
 
-Networking DSC: For network configuration.
+- IP: `192.168.50.5`
+- Prefix: `/24`
+- DNS: `127.0.0.1`
 
-ComputerManagement DSC: For managing computer-related configurations.
+**External NIC (Ethernet2)**
 
-Windows Server Active Directory Domain Services: For managing AD infrastructure.
 
-Domain Information
-Domain Controller Network Configuration
-Internal Network (Ethernet):
+- DNS: `127.0.0.1`
 
-IP Address: 10.0.2.15
+## Active Directory Design
 
-Subnet: /24
+### OU Strategy
 
-DNS: 127.0.0.1
+- **Tier0**: Admins, service accounts, domain infrastructure.
+- **Sites**: Location-based separation of users/computers (example: Bolton).
+- **Groups**: Security model separation.
+  - Global groups for job roles.
+  - Domain local groups for resource permissions.
+- **Clients**: Device separation by OS (`Windows`, `Linux`).
 
-External Network (Ethernet2):
+### Security Group Design
 
-IP Address: 192.168.1.10
+**Global groups**
 
-Subnet: /24
+- `GG_BB_Bolton_Baristas`
+- `GG_BB_Bolton_Managers`
+- `GG_BB_IT_Helpdesk`
 
-DNS: 127.0.0.1
+**Domain local groups**
 
-Domain Configuration
-Domain Name: barmbuzz.corp
+- `DL_BB_POS_LocalAdmins`
+- `DL_BB_Recipes_Read`
+- `DL_BB_Recipes_Write`
 
-NetBIOS Name: BARMBUZZ
+### Delegated Administration
 
-Domain Controller Name: BB-DC01
+Delegation allows the IT Helpdesk team to add/remove computers in scope OUs, including:
 
-Forest Mode: Windows Threshold
+- `OU=Computers`
+- `OU=Workstations`
+- `OU=Bolton`
 
-Domain Mode: Windows Threshold
+### Seed Users
 
-Active Directory Structure
-Tier 0
-Admins: Domain Admins, Service Accounts, Domain Controllers
+- `Ava.barista` - Senior Barista
+- `Bob.manager` - Depot Manager
+- `Charlie.helpdesk` - IT Helpdesk Analyst
 
-Purpose: Manages AD, security policies, and domain controller configuration.
+### Password Policy Baseline
 
-Sites
-Purpose: Contains records for users and computers.
+- Minimum length: 10
+- History: 12
+- Maximum age: 90 days
+- Minimum age: 1 day
+- Lockout threshold: 5
+- Lockout duration: 30 minutes
 
-Example: Users and devices in Bolton.
+## GPO Baseline
 
-Groups
-Global Groups: Represent job roles (e.g., Managers, Helpdesk).
+| GPO Name | Purpose |
+|---|---|
+| `BB_Workstation_Baseline` | Workstation security baseline |
+| `BB_Servers_Baseline` | Server security baseline |
+| `BB_POS_Lockdown` | POS terminal restrictions |
+| `BB_Allusers_Banner` | Logon banner for all users |
 
-Domain Local Groups: Control resource access (e.g., POS terminals).
+## Client Configuration Baseline
 
-Clients
-OU Clients: Separates machines by OS type (e.g., Windows, Linux). This simplifies management and ensures the correct configuration management tools are applied based on OS type.
+Reference client: `BB-WIN11-01`
 
-Security Group Design
-Global Groups
-GG_BB_Bolton_Baristas: Represent Bolton Baristas.
+### Time Zone
 
-GG_BB_Bolton_Managers: Represent Bolton Depot Managers.
-
-GG_BB_IT_Helpdesk: Represent IT Helpdesk staff.
-
-Domain Local Groups
-DL_BB_POS_LocalAdmins: Local admin access to POS terminals.
-
-DL_BB_Recipes_Read: Read access to recipe repository.
-
-DL_BB_Recipes_Write: Write access to recipe repository.
-
-Delegated Administration
-This project demonstrates Active Directory delegation, allowing the IT Helpdesk team to add/remove computers from the domain. This delegation applies to the following OUs: OU=Computers, OU=Workstations, and OU=Bolton.
-
-Domain Users
-Ava.barista: Senior Barista
-
-Bob.manager: Depot Manager
-
-Charlie.helpdesk: IT Helpdesk Analyst
-
-Password Policy
-Minimum Length: 10 characters
-
-Password History: 12 entries
-
-Maximum Age: 90 days
-
-Minimum Age: 1 day
-
-Account Lockout: 5 attempts
-
-Lockout Duration: 30 minutes
-
-Group Policy Objects (GPO)
-GPO Name	Purpose
-BB_Workstation_Baseline	Workstation security baseline
-BB_Servers_Baseline	Server security baseline
-BB_POS_Lockdown	POS terminal restrictions
-BB_Allusers_Banner	Logon banner for all users
-Client Configuration
-Client: BB-WIN11-01
-Time Zone Configuration:
-
+```powershell
 TimeZone SetClientTimeZone {
     IsSingleInstance = 'Yes'
     TimeZone = $Node.TimeZone
 }
-DNS Configuration:
+```
 
+### DNS
+
+```powershell
 DnsServerAddress SetDnsToDC {
     InterfaceAlias = $Node.InterfaceAlias_Internal
     Address = $Node.DnsServerAddress
     AddressFamily = 'IPv4'
 }
-Domain Join:
+```
 
+### Domain Join
+
+```powershell
 Computer JoinDomain {
     Name = $Node.ComputerName
     DomainName = $Node.DomainName
     JoinOU = $Node.JoinOU
     Credential = $DomainAdminCredential
 }
-Windows Time Services:
-Ensure the W32Time service is running:
+```
 
+### Core Security/Platform Settings
+
+```powershell
 Service WindowsTimeClient {
     Name = 'W32Time'
     State = 'Running'
     StartupType = 'Automatic'
 }
-Security Features:
-Disable SMBv1 (legacy protocol):
+```
 
+```powershell
 WindowsOptionalFeature DisableSMBv1Client {
     Name = 'SMB1Protocol'
     Ensure = 'Disable'
 }
-Ensure Windows Firewall is Running:
+```
 
+```powershell
 Service WindowsFirewall {
     Name = 'mpsSvc'
     State = 'Running'
     StartupType = 'Automatic'
 }
-DSC Configuration
-To compile and apply the DSC configuration, follow these steps:
+```
 
-Import Configuration and Create Credentials:
+## Build and Apply
 
+### Option A: Canonical Orchestration (recommended)
+
+Run from repository root in elevated PowerShell:
+
+```powershell
+.\Run_BuildMain.ps1
+```
+
+### Option B: Direct DSC Invocation
+
+1) Create credentials:
+
+```powershell
 $DomainAdminCredential = Get-Credential
 $DsrmCredential = Get-Credential
 $UserCredential = Get-Credential
-Compile DSC Configuration:
+```
 
+2) Compile:
+
+```powershell
 StudentBaseline -ConfigurationData .\AllNodes.psd1 `
     -DomainAdminCredential $DomainAdminCredential `
     -DsrmCredential $DsrmCredential `
     -UserCredential $UserCredential
-Start DSC Configuration:
+```
 
+3) Apply:
+
+```powershell
 Start-DscConfiguration -Path .\StudentBaseline -Wait -Verbose -Force
-Conclusion
-This project successfully demonstrates how PowerShell DSC can automate the configuration of an Active Directory environment, making AD management more consistent, scalable, and secure. While there were some challenges with Group Policy Objects (GPOs) compatibility with PowerShell 7, the overall automation process simplified AD management tasks significantly.
+```
 
-References
-Microsoft (2024). Active Directory Domain Services Overview. Available at: Microsoft AD Overview
+## Expected Outcome
 
-Microsoft (2024). PowerShell Desired State Configuration (DSC) Documentation. Available at: DSC Overview
+Successful execution yields:
 
-Microsoft (2024). Group Policy Overview. Available at: Group Policy Overview
+- Domain/forest configured.
+- OU hierarchy created.
+- Groups/users/computer accounts provisioned.
+- Baseline policy settings applied.
+- Client baseline controls configured.
 
-Microsoft (2024). Active Directory Security Best Practices. Available at: Security Best Practices
+## Notes
 
-Packt Publishing, Limited. Mastering Active Directory. United Kingdom: Packt Publishing.
+- GroupPolicy DSC compatibility can vary with PowerShell 7 in some environments.
+- For consistent runs, use the orchestrator and preserve generated evidence artifacts.
 
-Bertram, A.R. (2020) PowerShell for sysadmins: workflow automation made easy. 1st edn. San Francisco, CA: No Starch Press.
+## References
 
-Francis, D. (2021) ‘Advanced AD Management with PowerShell,’ in Mastering Active Directory. United Kingdom: Packt Publishing, Limited.
-
-Lee, T. (2021) Windows Server Automation with PowerShell Cookbook. 4th edn. Packt Publishing.
-
-Sukhija, V. (2021) PowerShell Fast Track: Hacks for Non-Coders. 1st edn. Berkeley, CA: Apress.
-
-Waters, I. (2021) PowerShell for Beginners: Learn PowerShell 7 Through Hands-On Mini Games. 1st edn. Berkeley, CA: Apress L. P.
+- Microsoft (2024). *Active Directory Domain Services Overview*. Available at: Microsoft AD Overview
+- Microsoft (2024). *PowerShell Desired State Configuration (DSC) Documentation*. Available at: DSC Overview
+- Microsoft (2024). *Group Policy Overview*. Available at: Group Policy Overview
+- Microsoft (2024). *Active Directory Security Best Practices*. Available at: Security Best Practices
+- Packt Publishing, Limited. *Mastering Active Directory*. United Kingdom: Packt Publishing.
+- Bertram, A.R. (2020). *PowerShell for Sysadmins: Workflow Automation Made Easy*. 1st edn. San Francisco, CA: No Starch Press.
+- Francis, D. (2021). "Advanced AD Management with PowerShell," in *Mastering Active Directory*. United Kingdom: Packt Publishing, Limited.
+- Lee, T. (2021). *Windows Server Automation with PowerShell Cookbook*. 4th edn. Packt Publishing.
+- Sukhija, V. (2021). *PowerShell Fast Track: Hacks for Non-Coders*. 1st edn. Berkeley, CA: Apress.
+- Waters, I. (2021). *PowerShell for Beginners: Learn PowerShell 7 Through Hands-On Mini Games*. 1st edn. Berkeley, CA: Apress L. P.
