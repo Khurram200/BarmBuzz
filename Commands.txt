@@ -11,3 +11,18 @@ Remove-Item "C:\BarmBuzz-main\Evidence\prereq_network_complete.flag" -ErrorActio
 # 4) Run build again
 cd C:\BarmBuzz-main
 .\Run_BuildMain.ps1
+
+
+
+cd C:\Devs\BarmBuzz-master
+
+# temporary for this terminal only (safest)
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+
+# remove "downloaded from internet" mark from repo scripts
+Get-ChildItem -Path . -Recurse -File -Include *.ps1,*.psd1 | Unblock-File
+
+# run build
+.\Run_BuildMain.ps1
+
+powershell -ExecutionPolicy Bypass -File .\Run_BuildMain.ps1
