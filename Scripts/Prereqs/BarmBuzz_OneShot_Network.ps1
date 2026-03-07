@@ -40,11 +40,19 @@ if (-not $profiles) {
     Write-Host "    [-] No active connection profiles found." -ForegroundColor Yellow
 } else {
     foreach ($p in $profiles) {
-        if ($p.NetworkCategory -ne 'Private') {
-            Write-Host "    Changing '$($p.Name)' (Idx $($p.InterfaceIndex)) from $($p.NetworkCategory) -> Private" -ForegroundColor Gray
+        if ($p.NetworkCategory -in @('Private', 'DomainAuthenticated')) {
+            Write-Host "    '$($p.Name)' already $($p.NetworkCategory) (OK)." -ForegroundColor Green
+            continue
+        }
+
+        Write-Host "    Changing '$($p.Name)' (Idx $($p.InterfaceIndex)) from $($p.NetworkCategory) -> Private" -ForegroundColor Gray
+        try {
             Set-NetConnectionProfile -InterfaceIndex $p.InterfaceIndex -NetworkCategory Private -ErrorAction Stop
-        } else {
-            Write-Host "    '$($p.Name)' already Private." -ForegroundColor Green
+            Write-Host "    [+] '$($p.Name)' set to Private." -ForegroundColor Green
+        }
+        catch {
+            Write-Warning "Could not change network category for '$($p.Name)' (Idx $($p.InterfaceIndex)): $($_.Exception.Message)"
+            Write-Warning "Continuing because Domain/Policy may enforce this value."
         }
     }
 }
