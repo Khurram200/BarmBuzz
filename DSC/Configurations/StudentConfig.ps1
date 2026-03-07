@@ -191,6 +191,24 @@ Configuration StudentBaseline {
         }
 
         
+        # COMPUTER ACCOUNTS
+        
+        if ($Node.ADComputers) {
+            foreach ($computer in $Node.ADComputers) {
+                $computerPath = "$($computer.OUPath),$($Node.DomainDN)"
+
+                ADComputer "Computer_$($computer.Key)" {
+                    ComputerName = $computer.ComputerName
+                    Path         = $computerPath
+                    Description  = $computer.Description
+                    Ensure       = 'Present'
+                    Credential   = $DomainAdminCredential
+                    DependsOn    = "[ADOrganizationalUnit]OU_$($computer.DependsOnKey)"
+                }
+            }
+        }
+
+        
         # PASSWORD POLICY
         
         ADDomainDefaultPasswordPolicy SetPasswordPolicy {

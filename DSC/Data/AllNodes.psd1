@@ -51,6 +51,10 @@
                 @{ Key = 'Bolton_Workstations';  Name = 'Workstations';    ParentPath = 'OU=Computers,OU=Bolton,OU=Sites,OU=BarmBuzz'; DependsOnKey = 'Bolton_Computers'; Protected = 'true'; Description = 'Staff Workstations and Depot machines' }
                 @{ Key = 'Bolton_POS';           Name = 'POS';             ParentPath = 'OU=Computers,OU=Bolton,OU=Sites,OU=BarmBuzz'; DependsOnKey = 'Bolton_Computers'; Protected = 'true'; Description = 'POS terminals at Barm Unloading Sectors' }
                 @{ Key = 'Bolton_Kiosks';        Name = 'Kiosks';          ParentPath = 'OU=Computers,OU=Bolton,OU=Sites,OU=BarmBuzz'; DependsOnKey = 'Bolton_Computers'; Protected = 'true'; Description = 'Self Service Ordering Kiosks' }
+                @{ Key = 'Derby';                Name = 'Derby';           ParentPath = 'OU=Sites,OU=BarmBuzz';           DependsOnKey = 'Sites';          Protected = 'true'; Description = 'Derby site container' }
+                @{ Key = 'Derby_Users';          Name = 'Users';           ParentPath = 'OU=Derby,OU=Sites,OU=BarmBuzz';  DependsOnKey = 'Derby';          Protected = 'true'; Description = 'Derby user accounts' }
+                @{ Key = 'Derby_Computers';      Name = 'Computers';       ParentPath = 'OU=Derby,OU=Sites,OU=BarmBuzz';  DependsOnKey = 'Derby';          Protected = 'true'; Description = 'Derby computer accounts' }
+                @{ Key = 'Derby_Nottingham';     Name = 'Nottingham';      ParentPath = 'OU=Derby,OU=Sites,OU=BarmBuzz';  DependsOnKey = 'Derby';          Protected = 'true'; Description = 'Nottingham sub-site under Derby' }
 
                 @{ Key = 'Groups';               Name = 'Groups';          ParentPath = 'OU=BarmBuzz';                    DependsOnKey = 'BarmBuzz';       Protected = 'true'; Description = 'Security and Distribution Group Container' }
                 @{ Key = 'Groups_Roles';         Name = 'Role';            ParentPath = 'OU=Groups,OU=BarmBuzz';          DependsOnKey = 'Groups';         Protected = 'true'; Description = 'Global role Groups (AGDLP: G layer)' }
@@ -132,6 +136,23 @@
                     Department          = 'IT'
                     Description         = 'IT Helpdesk - delegated workstation and user support.'
                     ChangePasswordAtLogon = 'true'
+                }
+            )
+
+            ADComputers = @(
+                @{
+                    Key          = 'win11_client_01'
+                    ComputerName = 'BB-WIN11-01'
+                    OUPath       = 'OU=Windows,OU=Clients,OU=BarmBuzz'
+                    DependsOnKey = 'Clients_Windows'
+                    Description  = 'Windows client computer account'
+                }
+                @{
+                    Key          = 'linux_client_01'
+                    ComputerName = 'BB-LINUX-01'
+                    OUPath       = 'OU=Linux,OU=Clients,OU=BarmBuzz'
+                    DependsOnKey = 'Clients_Linux'
+                    Description  = 'Linux client computer account'
                 }
             )
 
