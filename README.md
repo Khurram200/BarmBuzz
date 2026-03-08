@@ -1,4 +1,7 @@
 BarmBuzz Active Directory Automation
+
+Link to Github: https://github.com/Khurram200/BarmBuzz.git
+
 1. Solution Overview
 This repository delivers a single-domain Active Directory build for the BarmBuzz lab environment using PowerShell DSC as the primary control plane. The implementation is designed to be repeatable, evidence-driven, and suitable for rebuild from a clean machine using the documented entry point.
 The current solution provisions a single forest / single domain:
