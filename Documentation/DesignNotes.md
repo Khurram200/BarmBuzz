@@ -1,59 +1,37 @@
-Design Notes (Sh10crt)
-Explanation:
-
-<<<<<<< HEAD
-OU structure rationale
-Group model rationale
-GPO linking choices (later)
-Any security controls you applied
-Structure BarmBuzz-DSC-Lab │ ├── StudentBaseline.ps1 │ DSC configuration that reads │ AllNodes.psd1 and deploys the environment │ ├── AllNodes.psd1 │ Configuration data file containing │ domain settings, OU structure, │ users, groups, policies and node definitions │ └── README.md
-
-Active Directory Structure BarmBuzz │ ├── Tier0 │ ├── Admins │ ├── Servers │ └── ServiceAccounts │ ├── Sites │ └── Bolton │ ├── Users │ └── Computers │ ├── Workstations │ ├── POS │ └── Kiosks │ ├── Groups │ ├── Role │ └── Resource │ └── Clients
-
-├── Windows └── Linux
-=======
-Explain your decisions:
-- OU structure rationale
-- Group model rationale
-- GPO linking choices (later)
-- Any security controls you applied
-
-Structure
-BarmBuzz-DSC-Lab
-│
-├──  StudentBaseline.ps1
-│ DSC configuration that reads
-│ AllNodes.psd1 and deploys the environment
-│
-├── AllNodes.psd1
-│ Configuration data file containing
-│ domain settings, OU structure,
-│ users, groups, policies and node definitions
-│
-└── README.md
-
-Active Directory Structure
-BarmBuzz
-│
-├── Tier0
-│ ├── Admins
-│ ├── Servers
-│ └── ServiceAccounts
-│
-├── Sites
-│ └── Bolton
-│ ├── Users
-│ └── Computers
-│ ├── Workstations
-│ ├── POS
-│ └── Kiosks
-│
-├── Groups
-│ ├── Role
-│ └── Resource
-│
-└── Clients
-
-├── Windows
-└── Linux
->>>>>>> 3edaf51df2458ac32a5df360e19e9354ce099bb7
+.
+├── Run_BuildMain.ps1
+├── DSC
+│   ├── Configurations
+│   │   └── StudentConfig.ps1
+│   ├── Data
+│   │   └── AllNodes.psd1
+│   └── Outputs
+│       └── StudentBaseline
+├── Scripts
+│   ├── Prereqs
+│   │   ├── BarmBuzz_OneShot_LCM.ps1
+│   │   └── BarmBuzz_OneShot_Network.ps1
+│   └── Helpers
+│       └── Invoke-BarmBuzz-OneShots.ps1
+├── Tests
+│   └── Pester
+│       ├── Invoke-Validation.ps1
+│       ├── Baseline.Tests.ps1
+│       ├── Preflight-Environment.Tests.ps1
+│       ├── PreDCPromo.Tests.ps1
+│       ├── Hello.Tests.ps1
+│       ├── Test-ProofOfLife.Tests.ps1
+│       ├── Khurram.tests.ps1
+│       ├── Khurram-ADData.tests.ps1
+│       ├── Khurram-More.tests.ps1
+│       └── Khurram-OU.tests.ps1
+├── Evidence
+│   ├── Transcripts
+│   ├── DSC
+│   ├── Network
+│   ├── Pester
+│   ├── AI_LOG
+│   └── Git
+│       └── Reflog
+└── Documentation
+    └── README.docx
